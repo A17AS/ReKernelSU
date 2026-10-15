@@ -15,12 +15,10 @@
 ## 特性
 
 - 对于原版kernelsu增加GKI模式支持
-- 基于 [metamodules](https://kernelsu.org/zh_CN/guide/metamodule.html) 的模块系统：可插拔的模块架构。
-- [App Profile](https://kernelsu.org/zh_CN/guide/app-profile.html): 把 Root 权限关进笼子里。
+- 提供应用内直接下载AK3
+- 增加美化
 
 ## 鸣谢
 
-- [kernel-assisted-superuser](https://git.zx2c4.com/kernel-assisted-superuser/about/)：KernelSU 的灵感。
-- [Magisk](https://github.com/topjohnwu/Magisk)：强大的 root 工具箱。
-- [genuine](https://github.com/brevent/genuine/)：apk v2 签名验证。
-- [Diamorphine](https://github.com/m0nad/Diamorphine)：一些 rootkit 技巧。
+- [Kernelsu](https://github.com/topjohnwu/Magisk)：强大的root工具
+
