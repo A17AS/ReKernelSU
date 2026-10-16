@@ -61,7 +61,7 @@ val baseCFlags = listOf(
 val baseCppFlags = baseCFlags + "-fno-rtti"
 
 android {
-    namespace = "me.weishu.kernelsu"
+    namespace = "com.rekernelsu.su"
 
     buildTypes {
         debug {
@@ -149,7 +149,7 @@ android {
         applicationId = managerPackageName
 
         buildConfigField("boolean", "IS_PR_BUILD", isPrBuild.toString())
-        resValue("string", "app_name", managerName)
+        val managerName = "ReKernelsu"
 
         externalNativeBuild {
             cmake {
