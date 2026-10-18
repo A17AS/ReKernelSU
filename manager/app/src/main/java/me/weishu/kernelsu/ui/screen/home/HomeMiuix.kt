@@ -88,6 +88,13 @@ import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
+private const val CardAlpha = 0.4f
+
+@Composable
+private fun transparentCardColors() = CardDefaults.defaultColors(
+    color = colorScheme.surfaceContainer.copy(alpha = CardAlpha)
+)
+
 @Composable
 fun HomePagerMiuix(
     state: HomeUiState,
@@ -97,8 +104,7 @@ fun HomePagerMiuix(
     val scrollBehavior = MiuixScrollBehavior()
     val enableBlur = LocalEnableBlur.current
     val backdrop = rememberBlurBackdrop(enableBlur)
-    val blurActive = backdrop != null
-    val barColor = if (blurActive) Color.Transparent else colorScheme.surface
+    val barColor = Color.Transparent
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
@@ -277,7 +283,7 @@ private fun StatusCard(
                                 isDynamicColor -> colorScheme.secondaryContainer
                                 isInDarkTheme() -> Color(0xFF1A3825)
                                 else -> Color(0xFFDFFAE4)
-                            }
+                            }.copy(alpha = CardAlpha)
                         ),
                         onClick = {
                             if (!state.isLateLoadMode) {
@@ -373,6 +379,7 @@ private fun StatusCard(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Card(
                         modifier = Modifier.weight(1f),
+                        colors = transparentCardColors(),
                         onClick = {
                             if (!state.isLateLoadMode) {
                                 actions.onInstallClick()
@@ -408,6 +415,7 @@ private fun StatusCard(
 
             else -> {
                 Card(
+                    colors = transparentCardColors(),
                     onClick = {
                         if (!state.isLateLoadMode) {
                             actions.onInstallClick()
@@ -441,7 +449,7 @@ private fun SupportLinks(
 ) {
     val learnMoreUrl = stringResource(R.string.home_learn_kernelsu_url)
 
-    Card(modifier = modifier) {
+    Card(modifier = modifier, colors = transparentCardColors()) {
         ArrowPreference(
             title = stringResource(R.string.home_support_title),
             summary = stringResource(R.string.home_support_content),
@@ -532,7 +540,7 @@ private fun InfoCard(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Card(modifier = Modifier.fillMaxWidth()) {
+        Card(modifier = Modifier.fillMaxWidth(), colors = transparentCardColors()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 InfoText(
                     icon = Icons.Filled.Tag,
@@ -557,7 +565,7 @@ private fun InfoCard(
                 )
             }
         }
-        Card(modifier = Modifier.fillMaxWidth()) {
+        Card(modifier = Modifier.fillMaxWidth(), colors = transparentCardColors()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 InfoText(
                     icon = Icons.Filled.Security,
