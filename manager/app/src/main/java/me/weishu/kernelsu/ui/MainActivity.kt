@@ -242,12 +242,15 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    when (uiMode) {
-                        UiMode.Material -> androidx.compose.material3.Scaffold(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainer
-                        ) { navDisplay() }
+                    Box(Modifier.fillMaxSize()) {
+    CustomBackground(scrim = (if (darkMode) Color.Black else Color.White).copy(alpha = 0.4f))
+    when (uiMode) {
+        UiMode.Material -> androidx.compose.material3.Scaffold(
+            containerColor = materialPageColor()
+        ) { navDisplay() }
 
-                        UiMode.Miuix -> Scaffold { navDisplay() }
+        UiMode.Miuix -> Scaffold(containerColor = miuixPageColor()) { navDisplay() }
+    }
                     }
                     SideEffect { contentReady = true }
                 }
