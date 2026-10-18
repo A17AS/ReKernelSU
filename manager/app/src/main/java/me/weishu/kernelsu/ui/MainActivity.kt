@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.systemBars
@@ -40,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Density
@@ -243,14 +245,14 @@ class MainActivity : ComponentActivity() {
                     }
 
                     Box(Modifier.fillMaxSize()) {
-    CustomBackground(scrim = (if (darkMode) Color.Black else Color.White).copy(alpha = 0.4f))
-    when (uiMode) {
-        UiMode.Material -> androidx.compose.material3.Scaffold(
-            containerColor = materialPageColor()
-        ) { navDisplay() }
+                        CustomBackground(scrim = (if (darkMode) Color.Black else Color.White).copy(alpha = 0.4f))
+                        when (uiMode) {
+                            UiMode.Material -> androidx.compose.material3.Scaffold(
+                                containerColor = materialPageColor()
+                            ) { navDisplay() }
 
-        UiMode.Miuix -> Scaffold(containerColor = miuixPageColor()) { navDisplay() }
-    }
+                            UiMode.Miuix -> Scaffold(containerColor = miuixPageColor()) { navDisplay() }
+                        }
                     }
                     SideEffect { contentReady = true }
                 }
@@ -418,7 +420,7 @@ fun MainScreen(
 
             when (uiMode) {
                 UiMode.Material -> androidx.compose.material3.Scaffold(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    containerColor = materialPageColor()
                 ) {
                     Row {
                         SideRail(navigationBadge)
@@ -432,7 +434,7 @@ fun MainScreen(
                     }
                 }
 
-                UiMode.Miuix -> Scaffold { _ ->
+                UiMode.Miuix -> Scaffold(containerColor = miuixPageColor()) { _ ->
                     Row {
                         SideRail(navigationBadge)
                         Box(
@@ -462,12 +464,12 @@ fun MainScreen(
             when (uiMode) {
                 UiMode.Material -> androidx.compose.material3.Scaffold(
                     bottomBar = bottomBar,
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    containerColor = materialPageColor()
                 ) { innerPadding ->
                     pagerContent(innerPadding.calculateBottomPadding())
                 }
 
-                UiMode.Miuix -> Scaffold(bottomBar = bottomBar) { innerPadding ->
+                UiMode.Miuix -> Scaffold(bottomBar = bottomBar, containerColor = miuixPageColor()) { innerPadding ->
                     pagerContent(innerPadding.calculateBottomPadding())
                 }
             }
