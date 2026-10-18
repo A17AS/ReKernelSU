@@ -29,22 +29,19 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.DeveloperBoard
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Fingerprint
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Smartphone
-import androidx.compose.material.icons.filled.Tag
-import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
@@ -54,6 +51,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.KernelVersion
 import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
@@ -65,8 +68,11 @@ import me.weishu.kernelsu.ui.component.statustag.StatusTag
 import me.weishu.kernelsu.ui.theme.LocalEnableBlur
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
 import me.weishu.kernelsu.ui.util.BlurredBar
+import me.weishu.kernelsu.ui.util.getSuperuserCount
 import me.weishu.kernelsu.ui.util.module.LatestVersionInfo
 import me.weishu.kernelsu.ui.util.rememberBlurBackdrop
+import me.weishu.kernelsu.ui.viewmodel.ModuleViewModel
+import me.weishu.kernelsu.ui.viewmodel.SuperUserViewModel
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -80,7 +86,6 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.isDynamicColor
@@ -105,6 +110,26 @@ fun HomePagerMiuix(
     val enableBlur = LocalEnableBlur.current
     val backdrop = rememberBlurBackdrop(enableBlur)
     val barColor = Color.Transparent
+
+    // 旧版首页的「超级用户 / 模块」数量卡片
+    val moduleViewModel = viewModel<ModuleViewModel>()
+    val moduleUiState by moduleViewModel.uiState.collectAsStateWithLifecycle()
+    val superUserViewModel = viewModel<SuperUserViewModel>()
+    val grantedUidCount by remember(superUserViewModel) {
+        superUserViewModel.uiState
+            .map { uiState -> uiState.groupedApps.count { it.anyAllowSu } }
+            .distinctUntilChanged()
+    }.collectAsStateWithLifecycle(0)
+    var superuserCount by remember { mutableIntStateOf(0) }
+    LaunchedEffect(grantedUidCount, state.ksuVersion) {
+        superuserCount = if (state.ksuVersion != null && Natives.isFullFeatured()) {
+            withContext(Dispatchers.IO) { getSuperuserCount() }
+        } else {
+            0
+        }
+    }
+    val moduleCount = moduleUiState.modules.size
+
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
@@ -173,6 +198,8 @@ fun HomePagerMiuix(
                         StatusCard(
                             state = state,
                             actions = actions,
+                            superuserCount = superuserCount,
+                            moduleCount = moduleCount,
                         )
                         InfoCard(
                             systemInfo = state.systemInfo,
@@ -251,6 +278,8 @@ private fun TopBar(
 private fun StatusCard(
     state: HomeUiState,
     actions: HomeActions,
+    superuserCount: Int = 0,
+    moduleCount: Int = 0,
 ) {
     Column {
         when {
@@ -268,16 +297,24 @@ private fun StatusCard(
                     true -> "LKM"
                     else -> "GKI"
                 }
-                val workingText = "${stringResource(id = R.string.home_working)}$workingState"
+                val workingText = buildString {
+                    append(stringResource(id = R.string.home_working))
+                    if (workingMode != null) {
+                        append(" <$workingMode>")
+                    }
+                    append(workingState)
+                }
 
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(IntrinsicSize.Min),
-                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
                         colors = CardDefaults.defaultColors(
                             color = when {
                                 isDynamicColor -> colorScheme.secondaryContainer
@@ -293,15 +330,15 @@ private fun StatusCard(
                         showIndication = !state.isLateLoadMode,
                         pressFeedbackType = PressFeedbackType.Tilt
                     ) {
-                        Box {
+                        Box(modifier = Modifier.fillMaxSize()) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .offset(27.dp, 31.dp),
+                                    .offset(33.dp, 42.dp),
                                 contentAlignment = Alignment.BottomEnd
                             ) {
                                 Icon(
-                                    modifier = Modifier.size(110.dp),
+                                    modifier = Modifier.size(150.dp),
                                     imageVector = Icons.Rounded.CheckCircleOutline,
                                     tint = if (isDynamicColor) {
                                         colorScheme.primary.copy(alpha = 0.8f)
@@ -310,20 +347,6 @@ private fun StatusCard(
                                     },
                                     contentDescription = null
                                 )
-                            }
-                            if (workingMode != null) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(16.dp, 10.dp),
-                                    contentAlignment = Alignment.BottomStart,
-                                ) {
-                                    Text(
-                                        text = workingMode,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Medium,
-                                    )
-                                }
                             }
                             Box(
                                 modifier = Modifier
@@ -342,7 +365,7 @@ private fun StatusCard(
                                         Text(
                                             text = stringResource(
                                                 R.string.home_working_version,
-                                                "${state.ksuVersion}-${state.kernelUAPIVersion}"
+                                                "${state.ksuVersion}"
                                             ),
                                             modifier = Modifier.weight(1f, fill = false),
                                             fontSize = 15.sp,
@@ -371,6 +394,21 @@ private fun StatusCard(
                                 }
                             }
                         }
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        CountCard(
+                            title = stringResource(R.string.superuser),
+                            count = superuserCount,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        CountCard(
+                            title = stringResource(R.string.module),
+                            count = moduleCount,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                 }
             }
@@ -443,39 +481,80 @@ private fun StatusCard(
 }
 
 @Composable
+private fun CountCard(
+    title: String,
+    count: Int,
+    modifier: Modifier = Modifier,
+) {
+    Card(modifier = modifier, colors = transparentCardColors()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+        ) {
+            Text(
+                text = title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = colorScheme.onSurfaceVariantSummary,
+            )
+            Text(
+                text = count.toString(),
+                fontSize = 26.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+@Composable
 private fun SupportLinks(
     onOpenUrl: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val learnMoreUrl = stringResource(R.string.home_learn_kernelsu_url)
 
-    Card(modifier = modifier, colors = transparentCardColors()) {
-        ArrowPreference(
-            title = stringResource(R.string.home_support_title),
-            summary = stringResource(R.string.home_support_content),
-            startAction = {
-                Icon(
-                    imageVector = Icons.Filled.VolunteerActivism,
-                    contentDescription = stringResource(R.string.home_support_title),
-                    modifier = Modifier.padding(end = 6.dp),
-                    tint = colorScheme.onBackground,
-                )
-            },
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = transparentCardColors(),
             onClick = { onOpenUrl("https://patreon.com/weishu") },
-        )
-        ArrowPreference(
-            title = stringResource(R.string.home_learn_kernelsu),
-            summary = stringResource(R.string.home_click_to_learn_kernelsu),
-            startAction = {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.MenuBook,
-                    contentDescription = stringResource(R.string.home_learn_kernelsu),
-                    modifier = Modifier.padding(end = 6.dp),
-                    tint = colorScheme.onBackground,
-                )
-            },
+            pressFeedbackType = PressFeedbackType.Tilt,
+        ) {
+            BasicComponent(
+                title = stringResource(R.string.home_support_title),
+                summary = stringResource(R.string.home_support_content),
+                endActions = {
+                    Icon(
+                        imageVector = Icons.Rounded.Link,
+                        contentDescription = null,
+                        tint = colorScheme.onSurface,
+                    )
+                },
+            )
+        }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = transparentCardColors(),
             onClick = { onOpenUrl(learnMoreUrl) },
-        )
+            pressFeedbackType = PressFeedbackType.Tilt,
+        ) {
+            BasicComponent(
+                title = stringResource(R.string.home_learn_kernelsu),
+                summary = stringResource(R.string.home_click_to_learn_kernelsu),
+                endActions = {
+                    Icon(
+                        imageVector = Icons.Rounded.Link,
+                        contentDescription = null,
+                        tint = colorScheme.onSurface,
+                    )
+                },
+            )
+        }
     }
 }
 
@@ -486,39 +565,27 @@ private fun InfoCard(
 ) {
     @Composable
     fun InfoText(
-        icon: ImageVector,
         title: String,
         content: String,
         bottomPadding: Dp = 24.dp
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = bottomPadding),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                modifier = Modifier
-                    .padding(end = 12.dp)
-                    .size(24.dp),
-                tint = colorScheme.onSurface,
+            Text(
+                text = title,
+                fontSize = MiuixTheme.textStyles.headline1.fontSize,
+                fontWeight = FontWeight.Medium,
+                color = colorScheme.onSurface,
             )
-            Column {
-                Text(
-                    text = title,
-                    fontSize = MiuixTheme.textStyles.headline1.fontSize,
-                    fontWeight = FontWeight.Medium,
-                    color = colorScheme.onSurface,
-                )
-                Text(
-                    text = content,
-                    fontSize = MiuixTheme.textStyles.body2.fontSize,
-                    color = colorScheme.onSurfaceVariantSummary,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
-            }
+            Text(
+                text = content,
+                fontSize = MiuixTheme.textStyles.body2.fontSize,
+                color = colorScheme.onSurfaceVariantSummary,
+                modifier = Modifier.padding(top = 2.dp),
+            )
         }
     }
 
@@ -536,49 +603,29 @@ private fun InfoCard(
         else -> stringResource(R.string.seccomp_status_unknown)
     }
 
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Card(modifier = Modifier.fillMaxWidth(), colors = transparentCardColors()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                InfoText(
-                    icon = Icons.Filled.Tag,
-                    title = stringResource(R.string.home_manager_version),
-                    content = systemInfo.managerVersion,
-                )
-                InfoText(
-                    icon = Icons.Filled.DeveloperBoard,
-                    title = stringResource(R.string.home_kernel),
-                    content = systemInfo.kernelVersion,
-                )
-                InfoText(
-                    icon = Icons.Filled.Smartphone,
-                    title = stringResource(R.string.home_device_model),
-                    content = systemInfo.deviceModel,
-                )
-                InfoText(
-                    icon = Icons.Filled.Fingerprint,
-                    title = stringResource(R.string.home_fingerprint),
-                    content = systemInfo.fingerprint,
-                    bottomPadding = 0.dp,
-                )
-            }
-        }
-        Card(modifier = Modifier.fillMaxWidth(), colors = transparentCardColors()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                InfoText(
-                    icon = Icons.Filled.Security,
-                    title = stringResource(R.string.home_selinux_status),
-                    content = selinuxDisplay,
-                )
-                InfoText(
-                    icon = Icons.Filled.FilterList,
-                    title = stringResource(R.string.home_seccomp_status),
-                    content = seccompDisplay,
-                    bottomPadding = 0.dp,
-                )
-            }
+    Card(modifier = modifier, colors = transparentCardColors()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            InfoText(
+                title = stringResource(R.string.home_kernel),
+                content = systemInfo.kernelVersion,
+            )
+            InfoText(
+                title = stringResource(R.string.home_manager_version),
+                content = systemInfo.managerVersion,
+            )
+            InfoText(
+                title = stringResource(R.string.home_fingerprint),
+                content = systemInfo.fingerprint,
+            )
+            InfoText(
+                title = stringResource(R.string.home_selinux_status),
+                content = selinuxDisplay,
+            )
+            InfoText(
+                title = stringResource(R.string.home_seccomp_status),
+                content = seccompDisplay,
+                bottomPadding = 0.dp,
+            )
         }
     }
 }
