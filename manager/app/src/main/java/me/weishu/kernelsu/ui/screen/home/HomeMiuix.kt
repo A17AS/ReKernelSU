@@ -162,11 +162,6 @@ fun HomePagerMiuix(
                         if (state.checkUpdateEnabled) {
                             UpdateCard(state = state, actions = actions)
                         }
-                        if (state.showManagerPrBuildWarning) {
-                            WarningCard(stringResource(id = R.string.home_pr_build_warning), level = WarningLevel.Notice)
-                        } else if (state.showKernelPrBuildWarning) {
-                            WarningCard(stringResource(id = R.string.home_pr_kernel_warning), level = WarningLevel.Notice)
-                        }
                         if (state.showGkiWarning) {
                             WarningCard(stringResource(id = R.string.home_gki_warning), level = WarningLevel.Notice)
                         }
@@ -519,24 +514,6 @@ private fun SupportLinks(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = transparentCardColors(),
-            onClick = { onOpenUrl("https://patreon.com/weishu") },
-            pressFeedbackType = PressFeedbackType.Tilt,
-        ) {
-            BasicComponent(
-                title = stringResource(R.string.home_support_title),
-                summary = stringResource(R.string.home_support_content),
-                endActions = {
-                    Icon(
-                        imageVector = Icons.Rounded.Link,
-                        contentDescription = null,
-                        tint = colorScheme.onSurface,
-                    )
-                },
-            )
-        }
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = transparentCardColors(),
