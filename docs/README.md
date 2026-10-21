@@ -18,7 +18,4 @@
 - 提供应用内直接下载AK3
 - 增加美化
 
-## 鸣谢
-
-- [Kernelsu](https://github.com/topjohnwu/Magisk)：强大的root工具
 
