@@ -59,6 +59,7 @@ internal fun InstallScreenMaterial(
     uiState: InstallUiState,
     actions: InstallScreenActions,
     snackBarHost: SnackbarHostState,
+    onFlashAnyKernel3: (() -> Unit)? = null,
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
@@ -155,6 +156,22 @@ internal fun InstallScreenMaterial(
                                 }
                             },
                             onClick = actions.onUploadLkm
+                        )
+                    }
+                    if (onFlashAnyKernel3 != null) add {
+                        SegmentedListItem(
+                            leadingContent = {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.DriveFileMove,
+                                    null
+                                )
+                            },
+                            headlineContent = { Text("AnyKernel3 刷入") },
+                            supportingContent = { Text("选择 AnyKernel3 内核 zip 并直接刷入") },
+                            trailingContent = {
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
+                            },
+                            onClick = onFlashAnyKernel3
                         )
                     }
                 }
