@@ -2,11 +2,13 @@ package me.weishu.kernelsu.ui.screen.install
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -28,9 +30,12 @@ import me.weishu.kernelsu.ui.LocalUiMode
 import me.weishu.kernelsu.ui.UiMode
 import me.weishu.kernelsu.ui.component.choosekmidialog.ChooseKmiDialog
 import me.weishu.kernelsu.ui.component.dialog.DownloadDialog
+import me.weishu.kernelsu.ui.component.dialog.rememberConfirmDialog
 import me.weishu.kernelsu.ui.component.dialog.rememberLoadingDialog
 import me.weishu.kernelsu.ui.navigation3.LocalNavigator
 import me.weishu.kernelsu.ui.navigation3.Route
+import me.weishu.kernelsu.ui.screen.flash.AnyKernel3FlashScreen
+import me.weishu.kernelsu.ui.screen.flash.AnyKernel3Flasher
 import me.weishu.kernelsu.ui.screen.flash.FlashIt
 import me.weishu.kernelsu.ui.util.LkmSelection
 import me.weishu.kernelsu.ui.util.getAvailablePartitions
@@ -233,6 +238,42 @@ fun InstallScreen() {
             }
         }
     }
+    // ---- AnyKernel3 刷入 ----
+    val ak3Session by AnyKernel3Flasher.state.collectAsState()
+    var pendingAk3Uri by remember { mutableStateOf<Uri?>(null) }
+    val ak3ConfirmDialog = rememberConfirmDialog(
+        onConfirm = { pendingAk3Uri?.let { AnyKernel3Flasher.start(context, it) } },
+        onDismiss = null
+    )
+    val selectAk3Launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (it.resultCode == Activity.RESULT_OK) {
+            it.data?.data?.let { uri ->
+                pendingAk3Uri = uri
+                ak3ConfirmDialog.showConfirm(
+                    "刷入 AnyKernel3",
+                    "将把所选 AnyKernel3 包刷入当前槽位的 boot 分区。" +
+                        "内核与设备不匹配会导致无法开机，请先备份 boot。是否继续？"
+                )
+            }
+        }
+    }
+    // 只有管理器已获得 root 时才显示入口
+    val onFlashAnyKernel3: (() -> Unit)? = if (rootAvailable) {
+        {
+            selectAk3Launcher.launch(
+                Intent(Intent.ACTION_GET_CONTENT).apply {
+                    type = "*/*"
+                    putExtra(
+                        Intent.EXTRA_MIME_TYPES,
+                        arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")
+                    )
+                }
+            )
+        }
+    } else null
+
     val selectImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) {
@@ -322,8 +363,13 @@ fun InstallScreen() {
         }
     )
 
+    if (ak3Session.active) {
+        AnyKernel3FlashScreen(onClose = { AnyKernel3Flasher.reset() })
+        return
+    }
+
     when (LocalUiMode.current) {
-        UiMode.Miuix -> InstallScreenMiuix(state, actions, miuixSnackbarHost)
-        UiMode.Material -> InstallScreenMaterial(state, actions, snackbarHost)
+        UiMode.Miuix -> InstallScreenMiuix(state, actions, miuixSnackbarHost, onFlashAnyKernel3)
+        UiMode.Material -> InstallScreenMaterial(state, actions, snackbarHost, onFlashAnyKernel3)
     }
 }
